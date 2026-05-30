@@ -5,7 +5,7 @@ const initialState = {
   videos: [],
   selectedVideoId: null,
   titleText: {
-    enabled: false,
+    enabled: true,
     text: '제목을 입력하세요',
     x: 50,
     y: 6,

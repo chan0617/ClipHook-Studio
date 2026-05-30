@@ -8,20 +8,25 @@ import { exportAllVideos } from '../utils/videoExporter.js';
 function Section({ title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border border-[#2a2a38] rounded-xl overflow-hidden">
+    <div className="border border-[#2a2a38] rounded-xl" style={{ minWidth: 0 }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-[#1a1a22] hover:bg-[#1e1e2c] transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-[#1a1a22] hover:bg-[#1e1e2c] transition-colors rounded-xl"
+        style={{ borderRadius: open ? '12px 12px 0 0' : '12px' }}
       >
         <span className="text-xs font-bold text-gray-300">{title}</span>
         <svg
-          className={`w-3.5 h-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`w-3 h-3 text-gray-500 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && <div className="p-4 bg-[#16161e] flex flex-col gap-3">{children}</div>}
+      {open && (
+        <div className="px-3 pb-3 pt-2 bg-[#16161e] flex flex-col gap-2.5 rounded-b-xl" style={{ minWidth: 0 }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -186,12 +191,12 @@ function VideoSizeSection({ video, updateVideoSettings }) {
     <Section title="영상 크기/위치" defaultOpen>
       {/* Fit mode */}
       <FieldRow label="맞춤 모드">
-        <div className="flex gap-1.5">
+        <div className="grid grid-cols-3 gap-1">
           {fitOptions.map((opt) => (
             <button
               key={opt.value}
               onClick={() => updateVideoSettings(video.id, { fit: opt.value })}
-              className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors
+              className={`text-xs py-1.5 px-1 rounded-lg border transition-colors truncate
                 ${vs.fit === opt.value
                   ? 'bg-blue-600 border-blue-600 text-white'
                   : 'bg-[#1e1e2c] border-[#2a2a38] text-gray-400 hover:border-[#3a3a52]'
@@ -521,7 +526,7 @@ export default function RightPanel() {
   } = useEditor();
 
   return (
-    <aside className="flex flex-col gap-2.5 h-full overflow-y-auto overflow-x-hidden">
+    <aside className="flex flex-col gap-2 h-full overflow-y-auto overflow-x-hidden" style={{ minWidth: 0 }}>
       <AspectRatioSection />
       <TrimSection video={selectedVideo} updateTrim={updateTrim} />
       <VideoSizeSection video={selectedVideo} updateVideoSettings={updateVideoSettings} />
