@@ -208,14 +208,29 @@ function VideoSizeSection({ video, updateVideoSettings }) {
         </div>
       </FieldRow>
 
-      {/* Scale — works for all fit modes */}
-      <SliderField
-        label="영상 크기 (줌)"
-        value={vs.scale}
-        min={10} max={300} step={1}
-        onChange={(v) => updateVideoSettings(video.id, { scale: v })}
-        displayValue={`${vs.scale}%`}
-      />
+      {/* Scale — preset buttons + slider */}
+      <FieldRow label={`영상 크기  ${vs.scale}%`}>
+        <div className="flex gap-1.5 mb-1">
+          {[100, 120, 150, 200].map((s) => (
+            <button
+              key={s}
+              onClick={() => updateVideoSettings(video.id, { scale: s })}
+              className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors
+                ${vs.scale === s
+                  ? 'bg-blue-600 border-blue-600 text-white font-bold'
+                  : 'bg-[#1e1e2c] border-[#2a2a38] text-gray-400 hover:border-blue-500 hover:text-blue-300'
+                }`}
+            >
+              {s}%
+            </button>
+          ))}
+        </div>
+        <input
+          type="range" min={10} max={300} step={1} value={vs.scale}
+          onChange={(e) => updateVideoSettings(video.id, { scale: parseFloat(e.target.value) })}
+          className="w-full accent-blue-500"
+        />
+      </FieldRow>
 
       {/* X/Y position */}
       <SliderField

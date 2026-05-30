@@ -123,23 +123,6 @@ function VideoItem({ video, index, isSelected, onSelect, onRemove, onScaleChange
             )}
           </div>
 
-          {/* Display scale toggle */}
-          <div className="flex items-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
-            <span className="text-xs text-gray-600 mr-1">표시:</span>
-            {[100, 120].map((s) => (
-              <button
-                key={s}
-                onClick={() => onScaleChange(s)}
-                className={`text-xs px-2 py-0.5 rounded-md transition-colors
-                  ${video.displayScale === s
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-[#252535] text-gray-400 hover:bg-[#303048]'
-                  }`}
-              >
-                {s}%
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Remove */}
