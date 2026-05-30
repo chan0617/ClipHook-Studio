@@ -1,14 +1,14 @@
 import React from 'react';
 
-export default function PreviewCanvas({ video, overlays, overlayVideoUrl, selectedFont }) {
+export default function PreviewCanvas({ video, overlays, selectedFont }) {
   return (
     <main className="preview-shell">
       <div className="preview-header">
         <div>
           <h1>ClipHook Studio</h1>
-          <p>가로형 숏츠 미리보기</p>
+          <p>세로형 숏츠 미리보기</p>
         </div>
-        <span className="status-pill">16:9 가로 캔버스</span>
+        <span className="status-pill">9:16 세로 캔버스</span>
       </div>
 
       <div className="canvas-frame">
@@ -28,22 +28,6 @@ export default function PreviewCanvas({ video, overlays, overlayVideoUrl, select
           >
             {overlays.title.text}
           </div>
-        )}
-
-        {video && overlays.overlayVideo.enabled && overlayVideoUrl && (
-          <video
-            className="overlay-video"
-            src={overlayVideoUrl}
-            muted
-            loop
-            autoPlay
-            playsInline
-            style={{
-              width: `${overlays.overlayVideo.size}%`,
-              left: `${overlays.overlayVideo.x}%`,
-              top: `${overlays.overlayVideo.y}%`,
-            }}
-          />
         )}
 
         {video && overlays.username.enabled && (

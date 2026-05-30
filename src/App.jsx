@@ -15,12 +15,6 @@ const initialOverlays = {
     color: 'white',
     background: 'black',
   },
-  overlayVideo: {
-    enabled: true,
-    size: 28,
-    x: 72,
-    y: 36,
-  },
   username: {
     enabled: true,
     text: 'username',
@@ -36,7 +30,6 @@ export default function App() {
   const [selectedVideoId, setSelectedVideoId] = useState(null);
   const [overlays, setOverlays] = useState(initialOverlays);
   const [selectedFontId, setSelectedFontId] = useState(fontOptions[0].id);
-  const [overlayVideoUrl, setOverlayVideoUrl] = useState('');
 
   const selectedVideo = videos.find((video) => video.id === selectedVideoId) || null;
   const selectedFont = fontOptions.find((font) => font.id === selectedFontId) || fontOptions[0];
@@ -49,9 +42,8 @@ export default function App() {
   useEffect(() => {
     return () => {
       videos.forEach((video) => URL.revokeObjectURL(video.url));
-      if (overlayVideoUrl) URL.revokeObjectURL(overlayVideoUrl);
     };
-  }, [videos, overlayVideoUrl]);
+  }, [videos]);
 
   function handleAddVideos(files) {
     const slots = MAX_VIDEOS - videos.length;
@@ -97,12 +89,17 @@ export default function App() {
     }));
   }
 
-  function handleOverlayVideoUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (overlayVideoUrl) URL.revokeObjectURL(overlayVideoUrl);
-    setOverlayVideoUrl(URL.createObjectURL(file));
-    event.target.value = '';
+  function handleDownloadPlan() {
+    const payload = JSON.stringify(exportPlan, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'cliphook-export-plan.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -120,7 +117,6 @@ export default function App() {
       <PreviewCanvas
         video={selectedVideo}
         overlays={overlays}
-        overlayVideoUrl={overlayVideoUrl}
         selectedFont={selectedFont}
       />
 
@@ -131,7 +127,7 @@ export default function App() {
         onUpdateVideo={handleUpdateVideo}
         onUpdateOverlay={handleUpdateOverlay}
         onSetFont={setSelectedFontId}
-        onOverlayVideoUpload={handleOverlayVideoUpload}
+        onDownloadPlan={handleDownloadPlan}
         exportPlan={exportPlan}
       />
     </div>

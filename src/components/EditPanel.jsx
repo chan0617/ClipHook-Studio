@@ -8,7 +8,7 @@ export default function EditPanel({
   onUpdateVideo,
   onUpdateOverlay,
   onSetFont,
-  onOverlayVideoUpload,
+  onDownloadPlan,
   exportPlan,
 }) {
   return (
@@ -100,50 +100,6 @@ export default function EditPanel({
 
       <section className="panel-block">
         <OverlayToggle
-          label="오버레이 영상 표시"
-          enabled={overlays.overlayVideo.enabled}
-          onChange={(enabled) => onUpdateOverlay('overlayVideo', { enabled })}
-        />
-        <label>
-          <span>오버레이 영상 업로드</span>
-          <input type="file" accept="video/*" onChange={onOverlayVideoUpload} />
-        </label>
-        <label>
-          <span>오버레이 영상 크기</span>
-          <input
-            type="range"
-            min="10"
-            max="70"
-            value={overlays.overlayVideo.size}
-            onChange={(event) => onUpdateOverlay('overlayVideo', { size: event.target.value })}
-          />
-        </label>
-        <div className="field-grid two">
-          <label>
-            <span>가로 위치</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={overlays.overlayVideo.x}
-              onChange={(event) => onUpdateOverlay('overlayVideo', { x: event.target.value })}
-            />
-          </label>
-          <label>
-            <span>세로 위치</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={overlays.overlayVideo.y}
-              onChange={(event) => onUpdateOverlay('overlayVideo', { y: event.target.value })}
-            />
-          </label>
-        </div>
-      </section>
-
-      <section className="panel-block">
-        <OverlayToggle
           label="@username 표시"
           enabled={overlays.username.enabled}
           onChange={(enabled) => onUpdateOverlay('username', { enabled })}
@@ -180,6 +136,9 @@ export default function EditPanel({
         <div className="section-heading">
           <h2>내보내기용 데이터</h2>
         </div>
+        <button type="button" className="download-button" onClick={onDownloadPlan}>
+          설정 파일 다운로드
+        </button>
         <pre>{JSON.stringify(exportPlan, null, 2)}</pre>
       </section>
     </aside>
