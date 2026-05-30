@@ -6,16 +6,16 @@ export default function PreviewCanvas({ video, overlays, imageOverlayUrl, select
       <div className="preview-header">
         <div>
           <h1>ClipHook Studio</h1>
-          <p>Batch clip overlay preview</p>
+          <p>가로형 숏츠 미리보기</p>
         </div>
-        <span className="status-pill">MVP Preview</span>
+        <span className="status-pill">16:9 가로 캔버스</span>
       </div>
 
       <div className="canvas-frame">
         {video ? (
           <video key={video.id} className="preview-video" src={video.url} controls />
         ) : (
-          <div className="preview-empty">Upload a video to preview edits</div>
+          <div className="preview-empty">영상을 업로드하면 여기에서 미리 볼 수 있습니다</div>
         )}
 
         {video && overlays.title.enabled && (
@@ -35,7 +35,11 @@ export default function PreviewCanvas({ video, overlays, imageOverlayUrl, select
             className="overlay-image"
             src={imageOverlayUrl}
             alt=""
-            style={{ width: `${overlays.image.size}%` }}
+            style={{
+              width: `${overlays.image.size}%`,
+              left: `${overlays.image.x}%`,
+              top: `${overlays.image.y}%`,
+            }}
           />
         )}
 

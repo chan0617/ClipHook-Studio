@@ -14,7 +14,7 @@ export default function VideoUploader({ count, onAddVideos }) {
   return (
     <section className="panel-block">
       <div className="section-heading">
-        <h2>Videos</h2>
+        <h2>영상 업로드</h2>
         <span>{count}/{MAX_VIDEOS}</span>
       </div>
       <label className={`upload-box ${remaining === 0 ? 'is-disabled' : ''}`}>
@@ -25,8 +25,8 @@ export default function VideoUploader({ count, onAddVideos }) {
           disabled={remaining === 0}
           onChange={handleChange}
         />
-        <strong>Upload clips</strong>
-        <small>Up to 10 video files</small>
+        <strong>영상 추가</strong>
+        <small>최대 10개까지 업로드</small>
       </label>
     </section>
   );

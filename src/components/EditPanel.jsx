@@ -15,12 +15,12 @@ export default function EditPanel({
     <aside className="right-panel">
       <section className="panel-block">
         <div className="section-heading">
-          <h2>Clip trim</h2>
+          <h2>영상 자르기</h2>
         </div>
         {selectedVideo ? (
           <div className="field-grid two">
             <label>
-              <span>Start</span>
+              <span>시작 시간</span>
               <input
                 type="number"
                 min="0"
@@ -30,7 +30,7 @@ export default function EditPanel({
               />
             </label>
             <label>
-              <span>End</span>
+              <span>종료 시간</span>
               <input
                 type="number"
                 min="0"
@@ -41,18 +41,18 @@ export default function EditPanel({
             </label>
           </div>
         ) : (
-          <p className="empty-text">Select a clip first.</p>
+          <p className="empty-text">먼저 영상을 선택하세요.</p>
         )}
       </section>
 
       <section className="panel-block">
         <OverlayToggle
-          label="Title"
+          label="제목 표시"
           enabled={overlays.title.enabled}
           onChange={(enabled) => onUpdateOverlay('title', { enabled })}
         />
         <label>
-          <span>Title text</span>
+          <span>제목 문구</span>
           <input
             value={overlays.title.text}
             onChange={(event) => onUpdateOverlay('title', { text: event.target.value })}
@@ -60,29 +60,29 @@ export default function EditPanel({
         </label>
         <div className="field-grid two">
           <label>
-            <span>Text color</span>
+            <span>글자색</span>
             <select
               value={overlays.title.color}
               onChange={(event) => onUpdateOverlay('title', { color: event.target.value })}
             >
-              <option value="white">white</option>
-              <option value="black">black</option>
+              <option value="white">흰색</option>
+              <option value="black">검정</option>
             </select>
           </label>
           <label>
-            <span>Background</span>
+            <span>제목 배경</span>
             <select
               value={overlays.title.background}
               onChange={(event) => onUpdateOverlay('title', { background: event.target.value })}
             >
-              <option value="black">black</option>
-              <option value="white">white</option>
-              <option value="transparent">transparent</option>
+              <option value="black">검정</option>
+              <option value="white">흰색</option>
+              <option value="transparent">투명</option>
             </select>
           </label>
         </div>
         <label>
-          <span>Font</span>
+          <span>폰트</span>
           <select value={selectedFontId} onChange={(event) => onSetFont(event.target.value)}>
             {fontOptions.map((font) => (
               <option key={font.id} value={font.id}>
@@ -100,16 +100,16 @@ export default function EditPanel({
 
       <section className="panel-block">
         <OverlayToggle
-          label="Image overlay"
+          label="이미지 표시"
           enabled={overlays.image.enabled}
           onChange={(enabled) => onUpdateOverlay('image', { enabled })}
         />
         <label>
-          <span>Image</span>
+          <span>이미지 업로드</span>
           <input type="file" accept="image/*" onChange={onImageUpload} />
         </label>
         <label>
-          <span>Image size</span>
+          <span>이미지 크기</span>
           <input
             type="range"
             min="10"
@@ -118,16 +118,38 @@ export default function EditPanel({
             onChange={(event) => onUpdateOverlay('image', { size: event.target.value })}
           />
         </label>
+        <div className="field-grid two">
+          <label>
+            <span>가로 위치</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={overlays.image.x}
+              onChange={(event) => onUpdateOverlay('image', { x: event.target.value })}
+            />
+          </label>
+          <label>
+            <span>세로 위치</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={overlays.image.y}
+              onChange={(event) => onUpdateOverlay('image', { y: event.target.value })}
+            />
+          </label>
+        </div>
       </section>
 
       <section className="panel-block">
         <OverlayToggle
-          label="@username"
+          label="@username 표시"
           enabled={overlays.username.enabled}
           onChange={(enabled) => onUpdateOverlay('username', { enabled })}
         />
         <label>
-          <span>Username</span>
+          <span>계정명</span>
           <input
             value={overlays.username.text}
             onChange={(event) => onUpdateOverlay('username', { text: event.target.value })}
@@ -137,12 +159,12 @@ export default function EditPanel({
 
       <section className="panel-block">
         <OverlayToggle
-          label="AI label"
+          label="AI 생성물 표시"
           enabled={overlays.aiLabel.enabled}
           onChange={(enabled) => onUpdateOverlay('aiLabel', { enabled })}
         />
         <label>
-          <span>Opacity</span>
+          <span>투명도</span>
           <input
             type="range"
             min="0"
@@ -156,7 +178,7 @@ export default function EditPanel({
 
       <section className="panel-block export-block">
         <div className="section-heading">
-          <h2>Export-ready data</h2>
+          <h2>내보내기용 데이터</h2>
         </div>
         <pre>{JSON.stringify(exportPlan, null, 2)}</pre>
       </section>

@@ -11,13 +11,15 @@ const MAX_VIDEOS = 10;
 const initialOverlays = {
   title: {
     enabled: true,
-    text: 'Hook title',
+    text: '영상 제목을 입력하세요',
     color: 'white',
     background: 'black',
   },
   image: {
     enabled: true,
     size: 28,
+    x: 72,
+    y: 36,
   },
   username: {
     enabled: true,

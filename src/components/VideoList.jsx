@@ -4,10 +4,10 @@ export default function VideoList({ videos, selectedVideoId, onSelectVideo, onRe
   return (
     <section className="panel-block video-list">
       <div className="section-heading">
-        <h2>Clip list</h2>
+        <h2>영상 목록</h2>
       </div>
       {videos.length === 0 ? (
-        <p className="empty-text">No clips uploaded yet.</p>
+        <p className="empty-text">아직 업로드한 영상이 없습니다.</p>
       ) : (
         videos.map((video, index) => (
           <button
@@ -20,7 +20,7 @@ export default function VideoList({ videos, selectedVideoId, onSelectVideo, onRe
             <span className="video-meta">
               <strong>{video.file.name}</strong>
               <small>
-                {video.startTime || 0}s - {video.endTime || 0}s
+                {video.startTime || 0}초 - {video.endTime || 0}초
               </small>
             </span>
             <span
@@ -38,7 +38,7 @@ export default function VideoList({ videos, selectedVideoId, onSelectVideo, onRe
                 }
               }}
             >
-              x
+              삭제
             </span>
           </button>
         ))

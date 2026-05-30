@@ -1,6 +1,6 @@
 :root {
-  color: #17202a;
-  background: #eef1f4;
+  color: #18212b;
+  background: #edf0f2;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -24,7 +24,7 @@ select {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 280px minmax(360px, 1fr) 340px;
+  grid-template-columns: 280px minmax(460px, 1fr) 360px;
   gap: 16px;
   min-height: 100vh;
   padding: 16px;
@@ -75,7 +75,7 @@ small {
   min-height: 120px;
   border: 1px dashed #8fa0b3;
   border-radius: 8px;
-  color: #1f5f8b;
+  color: #176b78;
   cursor: pointer;
   background: #f8fafc;
 }
@@ -97,7 +97,7 @@ small {
 .video-row {
   width: 100%;
   display: grid;
-  grid-template-columns: 28px 1fr 24px;
+  grid-template-columns: 28px minmax(0, 1fr) 36px;
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
@@ -142,6 +142,7 @@ small {
   display: grid;
   place-items: center;
   color: #6c7480;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -162,6 +163,7 @@ small {
 
 .preview-header h1 {
   font-size: 24px;
+  letter-spacing: 0;
 }
 
 .preview-header p {
@@ -171,10 +173,12 @@ small {
 
 .status-pill {
   padding: 7px 10px;
-  border: 1px solid #b8c2cc;
+  border: 1px solid #9fb5bd;
   border-radius: 999px;
-  background: #ffffff;
+  background: #f6fbfc;
+  color: #176b78;
   font-size: 13px;
+  font-weight: 700;
 }
 
 .canvas-frame {
@@ -183,17 +187,37 @@ small {
   place-items: center;
   width: 100%;
   aspect-ratio: 16 / 9;
-  min-height: 320px;
+  min-height: 360px;
   overflow: hidden;
+  border: 8px solid #111820;
   border-radius: 8px;
-  background: #101417;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    #101417;
+  background-size: 80px 80px;
   box-shadow: 0 20px 60px rgba(17, 24, 39, 0.16);
+}
+
+.canvas-frame::after {
+  content: "1920 x 1080";
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 3;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(0, 0, 0, 0.42);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
 }
 
 .preview-video {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   background: #050607;
 }
 
@@ -212,7 +236,7 @@ small {
 }
 
 .overlay-title {
-  top: 7%;
+  top: 6%;
   left: 50%;
   max-width: 82%;
   transform: translateX(-50%);
@@ -236,8 +260,7 @@ small {
 
 .overlay-image {
   position: absolute;
-  right: 8%;
-  top: 26%;
+  transform: translate(-50%, -50%);
   z-index: 2;
   max-width: 70%;
   max-height: 55%;
@@ -256,7 +279,7 @@ small {
 }
 
 .overlay-ai {
-  bottom: 6%;
+  bottom: 7%;
   left: 50%;
   transform: translateX(-50%);
   padding: 7px 14px;
@@ -279,6 +302,11 @@ label span {
   font-weight: 700;
 }
 
+label strong {
+  color: #18212b;
+  font-size: 13px;
+}
+
 input,
 select {
   width: 100%;
@@ -292,6 +320,7 @@ select {
 
 input[type="range"] {
   padding: 0;
+  accent-color: #176b78;
 }
 
 .field-grid {
