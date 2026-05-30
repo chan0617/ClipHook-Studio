@@ -15,7 +15,7 @@ const initialOverlays = {
     color: 'white',
     background: 'black',
   },
-  image: {
+  overlayVideo: {
     enabled: true,
     size: 28,
     x: 72,
@@ -36,7 +36,7 @@ export default function App() {
   const [selectedVideoId, setSelectedVideoId] = useState(null);
   const [overlays, setOverlays] = useState(initialOverlays);
   const [selectedFontId, setSelectedFontId] = useState(fontOptions[0].id);
-  const [imageOverlayUrl, setImageOverlayUrl] = useState('');
+  const [overlayVideoUrl, setOverlayVideoUrl] = useState('');
 
   const selectedVideo = videos.find((video) => video.id === selectedVideoId) || null;
   const selectedFont = fontOptions.find((font) => font.id === selectedFontId) || fontOptions[0];
@@ -49,9 +49,9 @@ export default function App() {
   useEffect(() => {
     return () => {
       videos.forEach((video) => URL.revokeObjectURL(video.url));
-      if (imageOverlayUrl) URL.revokeObjectURL(imageOverlayUrl);
+      if (overlayVideoUrl) URL.revokeObjectURL(overlayVideoUrl);
     };
-  }, [videos, imageOverlayUrl]);
+  }, [videos, overlayVideoUrl]);
 
   function handleAddVideos(files) {
     const slots = MAX_VIDEOS - videos.length;
@@ -97,11 +97,11 @@ export default function App() {
     }));
   }
 
-  function handleImageUpload(event) {
+  function handleOverlayVideoUpload(event) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (imageOverlayUrl) URL.revokeObjectURL(imageOverlayUrl);
-    setImageOverlayUrl(URL.createObjectURL(file));
+    if (overlayVideoUrl) URL.revokeObjectURL(overlayVideoUrl);
+    setOverlayVideoUrl(URL.createObjectURL(file));
     event.target.value = '';
   }
 
@@ -120,7 +120,7 @@ export default function App() {
       <PreviewCanvas
         video={selectedVideo}
         overlays={overlays}
-        imageOverlayUrl={imageOverlayUrl}
+        overlayVideoUrl={overlayVideoUrl}
         selectedFont={selectedFont}
       />
 
@@ -131,7 +131,7 @@ export default function App() {
         onUpdateVideo={handleUpdateVideo}
         onUpdateOverlay={handleUpdateOverlay}
         onSetFont={setSelectedFontId}
-        onImageUpload={handleImageUpload}
+        onOverlayVideoUpload={handleOverlayVideoUpload}
         exportPlan={exportPlan}
       />
     </div>

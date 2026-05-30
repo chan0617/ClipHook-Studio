@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function PreviewCanvas({ video, overlays, imageOverlayUrl, selectedFont }) {
+export default function PreviewCanvas({ video, overlays, overlayVideoUrl, selectedFont }) {
   return (
     <main className="preview-shell">
       <div className="preview-header">
@@ -30,15 +30,18 @@ export default function PreviewCanvas({ video, overlays, imageOverlayUrl, select
           </div>
         )}
 
-        {video && overlays.image.enabled && imageOverlayUrl && (
-          <img
-            className="overlay-image"
-            src={imageOverlayUrl}
-            alt=""
+        {video && overlays.overlayVideo.enabled && overlayVideoUrl && (
+          <video
+            className="overlay-video"
+            src={overlayVideoUrl}
+            muted
+            loop
+            autoPlay
+            playsInline
             style={{
-              width: `${overlays.image.size}%`,
-              left: `${overlays.image.x}%`,
-              top: `${overlays.image.y}%`,
+              width: `${overlays.overlayVideo.size}%`,
+              left: `${overlays.overlayVideo.x}%`,
+              top: `${overlays.overlayVideo.y}%`,
             }}
           />
         )}
@@ -51,7 +54,8 @@ export default function PreviewCanvas({ video, overlays, imageOverlayUrl, select
 
         {video && overlays.aiLabel.enabled && (
           <div className="overlay-ai" style={{ opacity: overlays.aiLabel.opacity }}>
-            AI 생성물
+            <span>이 영상은 AI 콘텐츠입니다.</span>
+            <span>AI-generated content.</span>
           </div>
         )}
       </div>

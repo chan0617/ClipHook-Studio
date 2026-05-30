@@ -8,7 +8,7 @@ export default function EditPanel({
   onUpdateVideo,
   onUpdateOverlay,
   onSetFont,
-  onImageUpload,
+  onOverlayVideoUpload,
   exportPlan,
 }) {
   return (
@@ -100,22 +100,22 @@ export default function EditPanel({
 
       <section className="panel-block">
         <OverlayToggle
-          label="이미지 표시"
-          enabled={overlays.image.enabled}
-          onChange={(enabled) => onUpdateOverlay('image', { enabled })}
+          label="오버레이 영상 표시"
+          enabled={overlays.overlayVideo.enabled}
+          onChange={(enabled) => onUpdateOverlay('overlayVideo', { enabled })}
         />
         <label>
-          <span>이미지 업로드</span>
-          <input type="file" accept="image/*" onChange={onImageUpload} />
+          <span>오버레이 영상 업로드</span>
+          <input type="file" accept="video/*" onChange={onOverlayVideoUpload} />
         </label>
         <label>
-          <span>이미지 크기</span>
+          <span>오버레이 영상 크기</span>
           <input
             type="range"
             min="10"
             max="70"
-            value={overlays.image.size}
-            onChange={(event) => onUpdateOverlay('image', { size: event.target.value })}
+            value={overlays.overlayVideo.size}
+            onChange={(event) => onUpdateOverlay('overlayVideo', { size: event.target.value })}
           />
         </label>
         <div className="field-grid two">
@@ -125,8 +125,8 @@ export default function EditPanel({
               type="range"
               min="0"
               max="100"
-              value={overlays.image.x}
-              onChange={(event) => onUpdateOverlay('image', { x: event.target.value })}
+              value={overlays.overlayVideo.x}
+              onChange={(event) => onUpdateOverlay('overlayVideo', { x: event.target.value })}
             />
           </label>
           <label>
@@ -135,8 +135,8 @@ export default function EditPanel({
               type="range"
               min="0"
               max="100"
-              value={overlays.image.y}
-              onChange={(event) => onUpdateOverlay('image', { y: event.target.value })}
+              value={overlays.overlayVideo.y}
+              onChange={(event) => onUpdateOverlay('overlayVideo', { y: event.target.value })}
             />
           </label>
         </div>
@@ -159,7 +159,7 @@ export default function EditPanel({
 
       <section className="panel-block">
         <OverlayToggle
-          label="AI 생성물 표시"
+          label="AI 콘텐츠 고지 표시"
           enabled={overlays.aiLabel.enabled}
           onChange={(enabled) => onUpdateOverlay('aiLabel', { enabled })}
         />
