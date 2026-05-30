@@ -203,16 +203,14 @@ function VideoSizeSection({ video, updateVideoSettings }) {
         </div>
       </FieldRow>
 
-      {/* Scale (only for original mode) */}
-      {vs.fit === 'original' && (
-        <SliderField
-          label="크기"
-          value={vs.scale}
-          min={10} max={300} step={1}
-          onChange={(v) => updateVideoSettings(video.id, { scale: v })}
-          displayValue={`${vs.scale}%`}
-        />
-      )}
+      {/* Scale — works for all fit modes */}
+      <SliderField
+        label="영상 크기 (줌)"
+        value={vs.scale}
+        min={10} max={300} step={1}
+        onChange={(v) => updateVideoSettings(video.id, { scale: v })}
+        displayValue={`${vs.scale}%`}
+      />
 
       {/* X/Y position */}
       <SliderField

@@ -65,9 +65,14 @@ function drawVideo(ctx, cw, ch, videoEl, videoData) {
       drawW = ch * videoAR;
     }
   } else {
-    drawW = vw * (vidScale / 100);
-    drawH = vh * (vidScale / 100);
+    drawW = vw;
+    drawH = vh;
   }
+
+  // scale applies to all fit modes
+  const zoom = (vidScale ?? 100) / 100;
+  drawW *= zoom;
+  drawH *= zoom;
 
   const drawX = (cw - drawW) / 2 + x;
   const drawY = (ch - drawH) / 2 + y;
