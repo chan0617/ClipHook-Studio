@@ -27,7 +27,7 @@ const initialState = {
     visible: true,
   },
   username: {
-    enabled: false,
+    enabled: true,
     text: '@username',
     x: 50,
     y: 50,
@@ -37,7 +37,7 @@ const initialState = {
     visible: true,
   },
   aiGenerated: {
-    enabled: false,
+    enabled: true,
     text: 'AI 생성물',
     x: 50,
     y: 93,

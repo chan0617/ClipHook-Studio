@@ -322,42 +322,47 @@ function ImageOverlaySection({ imageOverlay, updateImageOverlay }) {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      updateImageOverlay({ file, url, imgElement: img, enabled: true });
+      updateImageOverlay({ file, url, imgElement: img, enabled: true, visible: true });
     };
     img.src = url;
+    e.target.value = '';
   }, [updateImageOverlay]);
 
   return (
-    <Section title="이미지 오버레이">
-      <ToggleRow label="이미지 표시" checked={imageOverlay.enabled}
-        onChange={(v) => updateImageOverlay({ enabled: v })} />
-
-      {imageOverlay.enabled && (
-        <>
-          {imageOverlay.url ? (
-            <div className="flex items-center gap-2">
-              <img src={imageOverlay.url} className="w-10 h-10 object-contain rounded border border-[#2a2a38]" alt="" />
-              <button
-                onClick={() => inputRef.current?.click()}
-                className="text-xs text-blue-400 hover:text-blue-300"
-              >
-                이미지 변경
-              </button>
+    <Section title="이미지 오버레이" defaultOpen>
+      {/* Upload always visible */}
+      <div className="flex items-center gap-2">
+        {imageOverlay.url ? (
+          <>
+            <img src={imageOverlay.url} className="w-10 h-10 object-contain rounded border border-[#2a2a38] flex-shrink-0" alt="" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400 truncate">이미지 첨부됨</p>
+              <button onClick={() => inputRef.current?.click()}
+                className="text-xs text-blue-400 hover:text-blue-300">이미지 변경</button>
             </div>
-          ) : (
-            <button
-              onClick={() => inputRef.current?.click()}
-              className="w-full py-2 border border-dashed border-[#2a2a38] rounded-lg text-xs text-gray-500 hover:border-blue-600 hover:text-blue-400 transition-colors"
-            >
-              PNG / JPG 업로드
-            </button>
-          )}
-          <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp"
-            className="hidden" onChange={handleFile} />
+          </>
+        ) : (
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="w-full py-3 border-2 border-dashed border-[#2a2a38] rounded-xl text-xs text-gray-500 hover:border-blue-600 hover:text-blue-400 transition-colors flex flex-col items-center gap-1"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            PNG / JPG 이미지 첨부
+          </button>
+        )}
+        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp"
+          className="hidden" onChange={handleFile} />
+      </div>
 
-          <ToggleRow label="이미지 보임" checked={imageOverlay.visible}
+      {imageOverlay.url && (
+        <>
+          <ToggleRow label="이미지 표시" checked={imageOverlay.enabled}
+            onChange={(v) => updateImageOverlay({ enabled: v })} />
+          <ToggleRow label="화면에 보임" checked={imageOverlay.visible}
             onChange={(v) => updateImageOverlay({ visible: v })} />
-
           <SliderField label="X 위치" value={imageOverlay.x} min={0} max={100} step={1}
             onChange={(v) => updateImageOverlay({ x: v })} displayValue={`${imageOverlay.x}%`} />
           <SliderField label="Y 위치" value={imageOverlay.y} min={0} max={100} step={1}
@@ -375,24 +380,24 @@ function ImageOverlaySection({ imageOverlay, updateImageOverlay }) {
 
 function UsernameSection({ username, updateUsername }) {
   return (
-    <Section title="사용자 이름 (@username)">
-      <ToggleRow label="표시" checked={username.enabled}
+    <Section title="사용자 이름" defaultOpen>
+      {/* Text always editable */}
+      <FieldRow label="사용자명">
+        <input
+          value={username.text}
+          onChange={(e) => updateUsername({ text: e.target.value })}
+          className="w-full bg-[#1e1e2c] border border-[#2a2a38] rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-600"
+          placeholder="@username"
+        />
+      </FieldRow>
+
+      <ToggleRow label="화면에 표시" checked={username.enabled}
         onChange={(v) => updateUsername({ enabled: v })} />
 
       {username.enabled && (
         <>
-          <FieldRow label="사용자명">
-            <input
-              value={username.text}
-              onChange={(e) => updateUsername({ text: e.target.value })}
-              className="w-full bg-[#1e1e2c] border border-[#2a2a38] rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-600"
-              placeholder="@username"
-            />
-          </FieldRow>
-
           <ToggleRow label="보임" checked={username.visible}
             onChange={(v) => updateUsername({ visible: v })} />
-
           <SliderField label="X 위치" value={username.x} min={0} max={100} step={1}
             onChange={(v) => updateUsername({ x: v })} displayValue={`${username.x}%`} />
           <SliderField label="Y 위치" value={username.y} min={0} max={100} step={1}
@@ -410,23 +415,24 @@ function UsernameSection({ username, updateUsername }) {
 
 function AIGeneratedSection({ aiGenerated, updateAiGenerated }) {
   return (
-    <Section title="AI 생성물 표시">
-      <ToggleRow label="표시" checked={aiGenerated.enabled}
+    <Section title="AI 생성물 표시" defaultOpen>
+      {/* Text always editable */}
+      <FieldRow label="표시 문구">
+        <input
+          value={aiGenerated.text}
+          onChange={(e) => updateAiGenerated({ text: e.target.value })}
+          className="w-full bg-[#1e1e2c] border border-[#2a2a38] rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-600"
+          placeholder="AI 생성물"
+        />
+      </FieldRow>
+
+      <ToggleRow label="화면에 표시" checked={aiGenerated.enabled}
         onChange={(v) => updateAiGenerated({ enabled: v })} />
 
       {aiGenerated.enabled && (
         <>
-          <FieldRow label="문구">
-            <input
-              value={aiGenerated.text}
-              onChange={(e) => updateAiGenerated({ text: e.target.value })}
-              className="w-full bg-[#1e1e2c] border border-[#2a2a38] rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-600"
-            />
-          </FieldRow>
-
           <ToggleRow label="보임" checked={aiGenerated.visible}
             onChange={(v) => updateAiGenerated({ visible: v })} />
-
           <SliderField label="X 위치" value={aiGenerated.x} min={0} max={100} step={1}
             onChange={(v) => updateAiGenerated({ x: v })} displayValue={`${aiGenerated.x}%`} />
           <SliderField label="Y 위치" value={aiGenerated.y} min={0} max={100} step={1}
