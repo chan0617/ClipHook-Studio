@@ -27,8 +27,8 @@ const initialState = {
     visible: true,
   },
   username: {
-    enabled: false,
-    text: '@username',
+    enabled: true,
+    text: '@Slime_TapTap',
     x: 50,
     y: 50,
     fontSize: 36,

@@ -471,7 +471,7 @@ function ExportButton() {
   const disabled = !state.videos.length || status === 'processing';
 
   return (
-    <div className="mt-auto pt-3">
+    <div className="pt-3">
       <button
         onClick={handleExport}
         disabled={disabled}
@@ -515,7 +515,7 @@ export default function RightPanel() {
   } = useEditor();
 
   return (
-    <aside className="flex flex-col gap-2.5 h-full overflow-y-auto overflow-x-hidden">
+    <aside className="flex flex-col gap-2.5 pb-2">
       <AspectRatioSection />
       <TrimSection video={selectedVideo} updateTrim={updateTrim} />
       <VideoSizeSection video={selectedVideo} updateVideoSettings={updateVideoSettings} />
