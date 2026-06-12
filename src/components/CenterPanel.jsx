@@ -13,51 +13,89 @@ function formatTime(sec) {
 }
 
 export default function CenterPanel() {
-  const { state, selectedVideo, updateVideo } = useEditor();
+  const { state, selectedVideo, selectVideo, updateVideo } = useEditor();
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const animRef = useRef(null);
+  const videoCacheRef = useRef(new Map()); // preloaded video elements keyed by id
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
-  // Init hidden video element
+  // Sync video preload cache with videos list
   useEffect(() => {
-    const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
-    video.playsInline = true;
-    videoRef.current = video;
+    const cache = videoCacheRef.current;
+    const currentIds = new Set(state.videos.map((v) => v.id));
 
-    video.addEventListener('timeupdate', () => setCurrentTime(video.currentTime));
-    video.addEventListener('play', () => setIsPlaying(true));
-    video.addEventListener('pause', () => setIsPlaying(false));
-    video.addEventListener('ended', () => {
-      setIsPlaying(false);
-      if (selectedVideo) {
-        video.currentTime = selectedVideo.trim.start || 0;
+    // Remove elements for deleted videos
+    for (const [id, el] of cache) {
+      if (!currentIds.has(id)) {
+        el.pause();
+        el.src = '';
+        cache.delete(id);
       }
-    });
+    }
 
-    return () => {
-      video.src = '';
-    };
-  }, []);
+    // Preload new videos
+    for (const v of state.videos) {
+      if (!cache.has(v.id)) {
+        const el = document.createElement('video');
+        el.crossOrigin = 'anonymous';
+        el.playsInline = true;
+        el.preload = 'auto';
+        el.src = v.url;
+        el.load();
+        cache.set(v.id, el);
+      }
+    }
+  }, [state.videos.map((v) => v.id).join(',')]);
 
-  // Load video when selection changes
+  // Switch active video from preload cache when selection changes
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const cache = videoCacheRef.current;
 
     if (!selectedVideo) {
-      video.src = '';
-      video.load();
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current = null;
+      }
+      setIsPlaying(false);
+      setCurrentTime(0);
       return;
     }
 
-    video.src = selectedVideo.url;
-    video.load();
+    const el = cache.get(selectedVideo.id);
+    if (!el) return;
 
-    const onMeta = () => {
-      const duration = video.duration;
+    // Detach listeners from previous element
+    if (videoRef.current && videoRef.current !== el) {
+      videoRef.current.pause();
+    }
+
+    videoRef.current = el;
+    setIsPlaying(!el.paused);
+    setCurrentTime(el.currentTime);
+
+    const onTimeUpdate = () => setCurrentTime(el.currentTime);
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      // Auto-advance to next video
+      const idx = state.videos.findIndex((v) => v.id === selectedVideo.id);
+      if (idx >= 0 && idx < state.videos.length - 1) {
+        selectVideo(state.videos[idx + 1].id);
+      } else {
+        el.currentTime = selectedVideo.trim.start || 0;
+      }
+    };
+
+    el.addEventListener('timeupdate', onTimeUpdate);
+    el.addEventListener('play', onPlay);
+    el.addEventListener('pause', onPause);
+    el.addEventListener('ended', onEnded);
+
+    const setupMeta = () => {
+      const duration = el.duration;
       updateVideo(selectedVideo.id, {
         duration,
         trim: {
@@ -65,11 +103,21 @@ export default function CenterPanel() {
           end: selectedVideo.trim.end > 0 ? selectedVideo.trim.end : duration,
         },
       });
-      video.currentTime = selectedVideo.trim.start || 0;
+      el.currentTime = selectedVideo.trim.start || 0;
     };
 
-    video.addEventListener('loadedmetadata', onMeta, { once: true });
-    return () => video.removeEventListener('loadedmetadata', onMeta);
+    if (el.readyState >= 1) {
+      setupMeta();
+    } else {
+      el.addEventListener('loadedmetadata', setupMeta, { once: true });
+    }
+
+    return () => {
+      el.removeEventListener('timeupdate', onTimeUpdate);
+      el.removeEventListener('play', onPlay);
+      el.removeEventListener('pause', onPause);
+      el.removeEventListener('ended', onEnded);
+    };
   }, [selectedVideo?.id]);
 
   // Canvas render loop

@@ -1,5 +1,34 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import { useEditor } from '../context/EditorContext.jsx';
+
+async function extractThumbnail(url) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.preload = 'metadata';
+
+    const capture = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 160;
+      canvas.height = 90;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, 160, 90);
+      resolve(canvas.toDataURL('image/jpeg', 0.75));
+      video.src = '';
+    };
+
+    video.addEventListener('seeked', capture, { once: true });
+    video.addEventListener(
+      'loadedmetadata',
+      () => { video.currentTime = Math.min(0.5, video.duration * 0.05); },
+      { once: true },
+    );
+    video.addEventListener('error', () => resolve(null), { once: true });
+    video.src = url;
+    video.load();
+  });
+}
 
 function formatTime(sec) {
   if (!sec || isNaN(sec)) return '0:00';
@@ -9,8 +38,19 @@ function formatTime(sec) {
 }
 
 export default function LeftPanel() {
-  const { state, selectedVideo, addVideos, removeVideo, selectVideo, updateVideo } = useEditor();
+  const { state, selectedVideo, addVideos, setThumbnail, removeVideo, selectVideo, updateVideo } = useEditor();
   const inputRef = useRef(null);
+
+  // Extract thumbnails for videos that don't have one yet
+  useEffect(() => {
+    for (const video of state.videos) {
+      if (!video.thumbnail) {
+        extractThumbnail(video.url).then((thumb) => {
+          if (thumb) setThumbnail(video.id, thumb);
+        });
+      }
+    }
+  }, [state.videos.map((v) => v.id).join(','), setThumbnail]);
 
   const handleFiles = useCallback(
     (files) => {
@@ -102,9 +142,20 @@ function VideoItem({ video, index, isSelected, onSelect, onRemove, onScaleChange
         }`}
     >
       <div className="flex items-start gap-2">
-        {/* Index badge */}
-        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
-          {index}
+        {/* Thumbnail or index badge */}
+        <div className="flex-shrink-0 relative w-14 h-10 rounded-lg overflow-hidden bg-[#111120] flex items-center justify-center">
+          {video.thumbnail ? (
+            <img
+              src={video.thumbnail}
+              alt="thumbnail"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-xs font-bold text-gray-500">{index}</span>
+          )}
+          <span className="absolute bottom-0 right-0 bg-black/70 text-white text-[9px] font-bold px-1 rounded-tl">
+            {index}
+          </span>
         </div>
 
         {/* Info */}

@@ -55,6 +55,7 @@ function makeVideo(file) {
     url: URL.createObjectURL(file),
     name: file.name,
     duration: 0,
+    thumbnail: null,
     displayScale: 100,
     trim: { start: 0, end: 0 },
     videoSettings: { x: 0, y: 0, fit: 'fill', scale: 100 },
@@ -103,6 +104,14 @@ function reducer(state, action) {
         ),
       };
 
+    case 'SET_THUMBNAIL':
+      return {
+        ...state,
+        videos: state.videos.map((v) =>
+          v.id === action.id ? { ...v, thumbnail: action.thumbnail } : v,
+        ),
+      };
+
     case 'UPDATE_TRIM':
       return {
         ...state,
@@ -134,6 +143,10 @@ export function EditorProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const addVideos = useCallback((files) => dispatch({ type: 'ADD_VIDEOS', files }), []);
+  const setThumbnail = useCallback(
+    (id, thumbnail) => dispatch({ type: 'SET_THUMBNAIL', id, thumbnail }),
+    [],
+  );
   const removeVideo = useCallback((id) => dispatch({ type: 'REMOVE_VIDEO', id }), []);
   const selectVideo = useCallback((id) => dispatch({ type: 'SELECT_VIDEO', id }), []);
   const updateVideo = useCallback((id, patch) => dispatch({ type: 'UPDATE_VIDEO', id, patch }), []);
@@ -161,6 +174,7 @@ export function EditorProvider({ children }) {
         state,
         selectedVideo,
         addVideos,
+        setThumbnail,
         removeVideo,
         selectVideo,
         updateVideo,
