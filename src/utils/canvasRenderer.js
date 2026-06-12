@@ -1,16 +1,36 @@
 import { allFonts } from '../config/fontConfig.js';
 
+// Default export dimensions (9:16)
 export const EXPORT_W = 1080;
 export const EXPORT_H = 1920;
 
-export function renderFrame(ctx, canvasW, canvasH, videoEl, videoData, globalState) {
+const EXPORT_SIZES = {
+  '9:16': { w: 1080, h: 1920 },
+  '16:9': { w: 1920, h: 1080 },
+  '1:1':  { w: 1080, h: 1080 },
+};
+
+export function getExportSize(aspectRatio) {
+  const label = aspectRatio?.label || '9:16';
+  return EXPORT_SIZES[label] || EXPORT_SIZES['9:16'];
+}
+
+export function renderFrame(ctx, canvasW, canvasH, mediaEl, mediaData, globalState) {
   // Background
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, canvasW, canvasH);
 
-  // Video frame
-  if (videoEl && videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
-    drawVideo(ctx, canvasW, canvasH, videoEl, videoData, globalState);
+  // Media frame (video or image)
+  if (mediaEl) {
+    if (mediaData?.type === 'image') {
+      // Draw image item
+      if (mediaEl.complete || (mediaEl.naturalWidth && mediaEl.naturalWidth > 0)) {
+        drawImageMedia(ctx, canvasW, canvasH, mediaEl, globalState);
+      }
+    } else if (mediaEl.readyState !== undefined && mediaEl.readyState >= 2 && mediaEl.videoWidth > 0) {
+      // Draw video frame
+      drawVideo(ctx, canvasW, canvasH, mediaEl, mediaData, globalState);
+    }
   }
 
   // Image overlay
@@ -36,6 +56,47 @@ export function renderFrame(ctx, canvasW, canvasH, videoEl, videoData, globalSta
   if (ai.enabled && ai.visible) {
     drawSimpleText(ctx, canvasW, canvasH, ai);
   }
+}
+
+function drawImageMedia(ctx, cw, ch, imgEl, globalState) {
+  const { x = 0, y = 0, fit = 'fill', scale: vidScale = 100 } = globalState?.videoSettings || {};
+  const iw = imgEl.naturalWidth || imgEl.width || cw;
+  const ih = imgEl.naturalHeight || imgEl.height || ch;
+
+  const canvasAR = cw / ch;
+  const imgAR = iw / ih;
+
+  let drawW, drawH;
+
+  if (fit === 'fill') {
+    if (imgAR > canvasAR) {
+      drawH = ch;
+      drawW = ch * imgAR;
+    } else {
+      drawW = cw;
+      drawH = cw / imgAR;
+    }
+  } else if (fit === 'fit') {
+    if (imgAR > canvasAR) {
+      drawW = cw;
+      drawH = cw / imgAR;
+    } else {
+      drawH = ch;
+      drawW = ch * imgAR;
+    }
+  } else {
+    drawW = iw;
+    drawH = ih;
+  }
+
+  const zoom = (vidScale ?? 100) / 100;
+  drawW *= zoom;
+  drawH *= zoom;
+
+  const drawX = (cw - drawW) / 2 + x;
+  const drawY = (ch - drawH) / 2 + y;
+
+  ctx.drawImage(imgEl, drawX, drawY, drawW, drawH);
 }
 
 function drawVideo(ctx, cw, ch, videoEl, videoData, globalState) {

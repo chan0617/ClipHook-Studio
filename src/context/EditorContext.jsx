@@ -2,11 +2,12 @@ import React, { createContext, useContext, useReducer, useCallback } from 'react
 import { defaultFontId } from '../config/fontConfig.js';
 
 const initialState = {
-  videos: [],
+  mediaItems: [],
   selectedVideoId: null,
   videoSettings: { x: 0, y: 0, fit: 'fill', scale: 100 },
+  aspectRatio: { label: '9:16', w: 9, h: 16 },
   titleText: {
-    enabled: false,
+    enabled: true,
     text: '제목을 입력하세요',
     x: 50,
     y: 6,
@@ -38,8 +39,8 @@ const initialState = {
     visible: true,
   },
   aiGenerated: {
-    enabled: false,
-    text: 'AI 생성물',
+    enabled: true,
+    text: '이 콘텐츠는 AI를 활용하여 제작되었습니다.',
     x: 50,
     y: 93,
     fontSize: 22,
@@ -49,37 +50,50 @@ const initialState = {
   },
 };
 
-function makeVideo(file) {
+function makeVideoItem(file) {
   return {
     id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+    type: 'video',
     file,
     url: URL.createObjectURL(file),
     name: file.name,
     duration: 0,
     thumbnail: null,
-    trim: { start: 0, end: 0 },
+  };
+}
+
+function makeImageItem(file) {
+  return {
+    id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+    type: 'image',
+    file,
+    url: URL.createObjectURL(file),
+    name: file.name,
+    duration: 3,
+    imgElement: null,
   };
 }
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'ADD_VIDEOS': {
-      const slots = 10 - state.videos.length;
-      const newVideos = action.files.slice(0, slots).map(makeVideo);
-      if (!newVideos.length) return state;
+    case 'ADD_MEDIA_ITEMS': {
+      const slots = 10 - state.mediaItems.length;
+      const newItems = action.items.slice(0, slots);
+      if (!newItems.length) return state;
       return {
         ...state,
-        videos: [...state.videos, ...newVideos],
-        selectedVideoId: state.selectedVideoId || newVideos[0].id,
+        mediaItems: [...state.mediaItems, ...newItems],
+        selectedVideoId: state.selectedVideoId || newItems[0].id,
       };
     }
 
-    case 'REMOVE_VIDEO': {
-      const remaining = state.videos.filter((v) => v.id !== action.id);
-      URL.revokeObjectURL(state.videos.find((v) => v.id === action.id)?.url || '');
+    case 'REMOVE_MEDIA_ITEM': {
+      const remaining = state.mediaItems.filter((v) => v.id !== action.id);
+      const removed = state.mediaItems.find((v) => v.id === action.id);
+      if (removed?.url) URL.revokeObjectURL(removed.url);
       const newSelected =
         state.selectedVideoId === action.id ? (remaining[0]?.id || null) : state.selectedVideoId;
-      return { ...state, videos: remaining, selectedVideoId: newSelected };
+      return { ...state, mediaItems: remaining, selectedVideoId: newSelected };
     }
 
     case 'SELECT_VIDEO':
@@ -88,7 +102,7 @@ function reducer(state, action) {
     case 'UPDATE_VIDEO':
       return {
         ...state,
-        videos: state.videos.map((v) =>
+        mediaItems: state.mediaItems.map((v) =>
           v.id === action.id ? { ...v, ...action.patch } : v,
         ),
       };
@@ -99,18 +113,13 @@ function reducer(state, action) {
     case 'SET_THUMBNAIL':
       return {
         ...state,
-        videos: state.videos.map((v) =>
+        mediaItems: state.mediaItems.map((v) =>
           v.id === action.id ? { ...v, thumbnail: action.thumbnail } : v,
         ),
       };
 
-    case 'UPDATE_TRIM':
-      return {
-        ...state,
-        videos: state.videos.map((v) =>
-          v.id === action.id ? { ...v, trim: { ...v.trim, ...action.patch } } : v,
-        ),
-      };
+    case 'UPDATE_ASPECT_RATIO':
+      return { ...state, aspectRatio: action.aspectRatio };
 
     case 'UPDATE_TITLE':
       return { ...state, titleText: { ...state.titleText, ...action.patch } };
@@ -134,19 +143,31 @@ const EditorContext = createContext(null);
 export function EditorProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const addVideos = useCallback((files) => dispatch({ type: 'ADD_VIDEOS', files }), []);
+  const addVideos = useCallback((files) => {
+    const items = Array.from(files).map(makeVideoItem);
+    dispatch({ type: 'ADD_MEDIA_ITEMS', items });
+  }, []);
+
+  const addImages = useCallback((files) => {
+    const items = Array.from(files).map(makeImageItem);
+    dispatch({ type: 'ADD_MEDIA_ITEMS', items });
+  }, []);
+
   const setThumbnail = useCallback(
     (id, thumbnail) => dispatch({ type: 'SET_THUMBNAIL', id, thumbnail }),
     [],
   );
-  const removeVideo = useCallback((id) => dispatch({ type: 'REMOVE_VIDEO', id }), []);
+  const removeVideo = useCallback((id) => dispatch({ type: 'REMOVE_MEDIA_ITEM', id }), []);
   const selectVideo = useCallback((id) => dispatch({ type: 'SELECT_VIDEO', id }), []);
   const updateVideo = useCallback((id, patch) => dispatch({ type: 'UPDATE_VIDEO', id, patch }), []);
   const updateVideoSettings = useCallback(
     (patch) => dispatch({ type: 'UPDATE_VIDEO_SETTINGS', patch }),
     [],
   );
-  const updateTrim = useCallback((id, patch) => dispatch({ type: 'UPDATE_TRIM', id, patch }), []);
+  const updateAspectRatio = useCallback(
+    (aspectRatio) => dispatch({ type: 'UPDATE_ASPECT_RATIO', aspectRatio }),
+    [],
+  );
   const updateTitle = useCallback((patch) => dispatch({ type: 'UPDATE_TITLE', patch }), []);
   const updateImageOverlay = useCallback(
     (patch) => dispatch({ type: 'UPDATE_IMAGE_OVERLAY', patch }),
@@ -158,7 +179,7 @@ export function EditorProvider({ children }) {
     [],
   );
 
-  const selectedVideo = state.videos.find((v) => v.id === state.selectedVideoId) || null;
+  const selectedVideo = state.mediaItems.find((v) => v.id === state.selectedVideoId) || null;
 
   return (
     <EditorContext.Provider
@@ -166,12 +187,13 @@ export function EditorProvider({ children }) {
         state,
         selectedVideo,
         addVideos,
+        addImages,
         setThumbnail,
         removeVideo,
         selectVideo,
         updateVideo,
         updateVideoSettings,
-        updateTrim,
+        updateAspectRatio,
         updateTitle,
         updateImageOverlay,
         updateUsername,

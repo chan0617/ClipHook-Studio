@@ -2,8 +2,17 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useEditor } from '../context/EditorContext.jsx';
 import { renderFrame } from '../utils/canvasRenderer.js';
 
-const CANVAS_W = 360;
-const CANVAS_H = 640;
+const CANVAS_SIZES = {
+  '9:16': { w: 360, h: 640 },
+  '16:9': { w: 640, h: 360 },
+  '1:1':  { w: 480, h: 480 },
+};
+
+const EXPORT_LABELS = {
+  '9:16': '1080×1920',
+  '16:9': '1920×1080',
+  '1:1':  '1080×1080',
+};
 
 function formatTime(sec) {
   if (!sec || isNaN(sec)) return '0:00';
@@ -21,10 +30,16 @@ export default function CenterPanel() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
-  // Sync video preload cache with videos list
+  const arLabel = state.aspectRatio?.label || '9:16';
+  const canvasSize = CANVAS_SIZES[arLabel] || CANVAS_SIZES['9:16'];
+  const CANVAS_W = canvasSize.w;
+  const CANVAS_H = canvasSize.h;
+
+  // Sync video preload cache with video media items
   useEffect(() => {
     const cache = videoCacheRef.current;
-    const currentIds = new Set(state.videos.map((v) => v.id));
+    const videoItems = state.mediaItems.filter((v) => v.type === 'video');
+    const currentIds = new Set(videoItems.map((v) => v.id));
 
     // Remove elements for deleted videos
     for (const [id, el] of cache) {
@@ -36,7 +51,7 @@ export default function CenterPanel() {
     }
 
     // Preload new videos
-    for (const v of state.videos) {
+    for (const v of videoItems) {
       if (!cache.has(v.id)) {
         const el = document.createElement('video');
         el.crossOrigin = 'anonymous';
@@ -47,13 +62,13 @@ export default function CenterPanel() {
         cache.set(v.id, el);
       }
     }
-  }, [state.videos.map((v) => v.id).join(',')]);
+  }, [state.mediaItems.map((v) => v.id).join(',')]);
 
   // Switch active video from preload cache when selection changes
   useEffect(() => {
     const cache = videoCacheRef.current;
 
-    if (!selectedVideo) {
+    if (!selectedVideo || selectedVideo.type === 'image') {
       if (videoRef.current) {
         videoRef.current.pause();
         videoRef.current = null;
@@ -80,12 +95,12 @@ export default function CenterPanel() {
     const onPause = () => setIsPlaying(false);
     const onEnded = () => {
       setIsPlaying(false);
-      // Auto-advance to next video
-      const idx = state.videos.findIndex((v) => v.id === selectedVideo.id);
-      if (idx >= 0 && idx < state.videos.length - 1) {
-        selectVideo(state.videos[idx + 1].id);
+      // Auto-advance to next media item
+      const idx = state.mediaItems.findIndex((v) => v.id === selectedVideo.id);
+      if (idx >= 0 && idx < state.mediaItems.length - 1) {
+        selectVideo(state.mediaItems[idx + 1].id);
       } else {
-        el.currentTime = selectedVideo.trim.start || 0;
+        el.currentTime = 0;
       }
     };
 
@@ -96,14 +111,8 @@ export default function CenterPanel() {
 
     const setupMeta = () => {
       const duration = el.duration;
-      updateVideo(selectedVideo.id, {
-        duration,
-        trim: {
-          start: selectedVideo.trim.start || 0,
-          end: selectedVideo.trim.end > 0 ? selectedVideo.trim.end : duration,
-        },
-      });
-      el.currentTime = selectedVideo.trim.start || 0;
+      updateVideo(selectedVideo.id, { duration });
+      el.currentTime = 0;
     };
 
     if (el.readyState >= 1) {
@@ -126,38 +135,25 @@ export default function CenterPanel() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
+    // For image items, pass the imgElement as the "video" element
+    const mediaEl = selectedVideo?.type === 'image'
+      ? selectedVideo.imgElement
+      : videoRef.current;
+
     function loop() {
-      renderFrame(ctx, CANVAS_W, CANVAS_H, videoRef.current, selectedVideo, state);
+      renderFrame(ctx, CANVAS_W, CANVAS_H, mediaEl, selectedVideo, state);
       animRef.current = requestAnimationFrame(loop);
     }
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
-  }, [state, selectedVideo]);
-
-  // Enforce trim boundaries during playback
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !selectedVideo) return;
-
-    function checkTrim() {
-      const end = selectedVideo.trim.end;
-      if (end > 0 && video.currentTime >= end) {
-        video.pause();
-        video.currentTime = selectedVideo.trim.start || 0;
-      }
-    }
-
-    video.addEventListener('timeupdate', checkTrim);
-    return () => video.removeEventListener('timeupdate', checkTrim);
-  }, [selectedVideo?.trim]);
+  }, [state, selectedVideo, CANVAS_W, CANVAS_H]);
 
   const togglePlay = useCallback(() => {
+    if (selectedVideo?.type === 'image') return; // images don't play
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
-      if (selectedVideo?.trim.end > 0 && video.currentTime >= selectedVideo.trim.end) {
-        video.currentTime = selectedVideo.trim.start || 0;
-      }
+      if (video.ended) video.currentTime = 0;
       video.play().catch(() => {});
     } else {
       video.pause();
@@ -167,20 +163,41 @@ export default function CenterPanel() {
   const handleSeek = useCallback(
     (e) => {
       const video = videoRef.current;
-      if (!video || !selectedVideo) return;
+      if (!video || !selectedVideo || selectedVideo.type === 'image') return;
       const pct = parseFloat(e.target.value);
-      const start = selectedVideo.trim.start || 0;
-      const end = selectedVideo.trim.end || selectedVideo.duration;
-      video.currentTime = start + ((end - start) * pct) / 100;
+      const duration = selectedVideo.duration || 0;
+      video.currentTime = (duration * pct) / 100;
     },
     [selectedVideo],
   );
 
-  const trimStart = selectedVideo?.trim.start || 0;
-  const trimEnd = selectedVideo?.trim.end || selectedVideo?.duration || 0;
-  const trimDuration = Math.max(0, trimEnd - trimStart);
-  const progress =
-    trimDuration > 0 ? (Math.max(0, currentTime - trimStart) / trimDuration) * 100 : 0;
+  const duration = selectedVideo?.duration || 0;
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  // Aspect ratio for container style
+  const arParts = arLabel.split(':');
+  const arW = parseInt(arParts[0]);
+  const arH = parseInt(arParts[1]);
+
+  const containerStyle = {
+    aspectRatio: `${arW}/${arH}`,
+    background: '#080810',
+  };
+
+  // For 16:9 we limit height differently
+  if (arLabel === '16:9') {
+    containerStyle.width = 'min(100%, 640px)';
+    containerStyle.maxWidth = '640px';
+  } else if (arLabel === '1:1') {
+    containerStyle.height = 'min(100%, 480px)';
+    containerStyle.maxHeight = '480px';
+  } else {
+    // 9:16
+    containerStyle.height = 'min(100%, 640px)';
+    containerStyle.maxHeight = '640px';
+  }
+
+  const exportLabel = EXPORT_LABELS[arLabel] || '1080×1920';
 
   return (
     <div className="flex flex-col items-center gap-3 h-full">
@@ -192,7 +209,7 @@ export default function CenterPanel() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-blue-400 bg-blue-950 border border-blue-800 px-3 py-1.5 rounded-full">
-            9:16 &nbsp;·&nbsp; 1080×1920
+            {arLabel} &nbsp;·&nbsp; {exportLabel}
           </span>
         </div>
       </div>
@@ -204,12 +221,7 @@ export default function CenterPanel() {
       >
         <div
           className="relative rounded-2xl overflow-hidden border-4 border-[#1e1e2a] shadow-2xl"
-          style={{
-            aspectRatio: '9/16',
-            height: 'min(100%, 640px)',
-            maxHeight: '640px',
-            background: '#080810',
-          }}
+          style={containerStyle}
         >
           <canvas
             ref={canvasRef}
@@ -224,13 +236,13 @@ export default function CenterPanel() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
                   d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              <p className="text-gray-600 text-sm">영상을 업로드하세요</p>
+              <p className="text-gray-600 text-sm">미디어를 업로드하세요</p>
             </div>
           )}
 
           {/* Ratio badge */}
           <div className="absolute bottom-2 right-2 bg-black/50 text-white/70 text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none">
-            1080×1920
+            {exportLabel}
           </div>
         </div>
       </div>
@@ -240,7 +252,7 @@ export default function CenterPanel() {
         <div className="flex items-center gap-3">
           <button
             onClick={togglePlay}
-            disabled={!selectedVideo}
+            disabled={!selectedVideo || selectedVideo.type === 'image'}
             className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
           >
             {isPlaying ? (
@@ -260,14 +272,17 @@ export default function CenterPanel() {
             min="0"
             max="100"
             step="0.1"
-            value={progress.toFixed(1)}
+            value={selectedVideo?.type === 'image' ? 0 : progress.toFixed(1)}
             onChange={handleSeek}
-            disabled={!selectedVideo}
+            disabled={!selectedVideo || selectedVideo.type === 'image'}
             className="flex-1 accent-blue-500 disabled:opacity-30"
           />
 
           <span className="text-xs text-gray-500 tabular-nums w-20 text-right">
-            {formatTime(currentTime)} / {formatTime(trimEnd)}
+            {selectedVideo?.type === 'image'
+              ? `${selectedVideo.duration}s`
+              : `${formatTime(currentTime)} / ${formatTime(duration)}`
+            }
           </span>
         </div>
       </div>

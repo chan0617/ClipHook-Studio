@@ -1,21 +1,26 @@
-import { renderFrame, EXPORT_W, EXPORT_H } from './canvasRenderer.js';
+import { renderFrame, getExportSize } from './canvasRenderer.js';
 
 export async function exportAllVideos(state, onProgress, onError) {
-  const { videos } = state;
-  if (!videos.length) {
-    onError('내보낼 영상이 없습니다.');
+  const { mediaItems } = state;
+  if (!mediaItems || !mediaItems.length) {
+    onError('내보낼 미디어가 없습니다.');
     return;
   }
+
+  const { w: EXPORT_W, h: EXPORT_H } = getExportSize(state.aspectRatio);
 
   const canvas = document.createElement('canvas');
   canvas.width = EXPORT_W;
   canvas.height = EXPORT_H;
   const ctx = canvas.getContext('2d');
 
+  // Preload all media before starting recording
+  await preloadAllMedia(mediaItems);
+
   const mimeType = getSupportedMimeType();
   const stream = canvas.captureStream(30);
 
-  // audio context to capture video audio
+  // Audio context to capture video audio
   let audioCtx;
   let audioSource;
   let audioDest;
@@ -26,8 +31,12 @@ export async function exportAllVideos(state, onProgress, onError) {
     // audio not available
   }
 
+  // We create a single video element for all video segments
   const videoEl = document.createElement('video');
   videoEl.crossOrigin = 'anonymous';
+  videoEl.playsInline = true;
+  videoEl.muted = false;
+
   if (audioCtx) {
     try {
       audioSource = audioCtx.createMediaElementSource(videoEl);
@@ -58,13 +67,17 @@ export async function exportAllVideos(state, onProgress, onError) {
     recorder.onerror = (e) => reject(e);
   });
 
-  recorder.start(200);
+  recorder.start(100);
 
-  for (let i = 0; i < videos.length; i++) {
-    const videoData = videos[i];
-    onProgress({ current: i + 1, total: videos.length, name: videoData.name });
+  for (let i = 0; i < mediaItems.length; i++) {
+    const item = mediaItems[i];
+    onProgress({ current: i + 1, total: mediaItems.length, name: item.name });
     try {
-      await renderSegment(canvas, ctx, videoEl, videoData, state);
+      if (item.type === 'video') {
+        await renderVideoSegment(canvas, ctx, videoEl, item, state, EXPORT_W, EXPORT_H);
+      } else if (item.type === 'image') {
+        await renderImageSegment(canvas, ctx, item, state, EXPORT_W, EXPORT_H);
+      }
     } catch (err) {
       console.warn('Segment error:', err);
     }
@@ -88,37 +101,100 @@ export async function exportAllVideos(state, onProgress, onError) {
   URL.revokeObjectURL(url);
 }
 
-function renderSegment(canvas, ctx, videoEl, videoData, state) {
-  return new Promise((resolve, reject) => {
-    const { url, trim } = videoData;
-    const endTime = trim.end > trim.start ? trim.end : null;
+/**
+ * Preload all media items before starting the recording.
+ * For videos: wait for readyState >= 4 (HAVE_ENOUGH_DATA)
+ * For images: ensure imgElement is loaded
+ */
+async function preloadAllMedia(mediaItems) {
+  const promises = mediaItems.map((item) => {
+    if (item.type === 'video') {
+      return new Promise((resolve) => {
+        const el = document.createElement('video');
+        el.crossOrigin = 'anonymous';
+        el.preload = 'auto';
+        el.src = item.url;
+        if (el.readyState >= 4) {
+          item._preloadEl = el;
+          resolve();
+          return;
+        }
+        el.addEventListener('canplaythrough', () => {
+          item._preloadEl = el;
+          resolve();
+        }, { once: true });
+        el.addEventListener('error', () => resolve(), { once: true });
+        el.load();
+        // Fallback timeout
+        setTimeout(resolve, 15_000);
+      });
+    } else if (item.type === 'image') {
+      return new Promise((resolve) => {
+        if (item.imgElement && item.imgElement.complete && item.imgElement.naturalWidth > 0) {
+          resolve();
+          return;
+        }
+        const img = item.imgElement || new Image();
+        if (img.complete && img.naturalWidth > 0) {
+          item.imgElement = img;
+          resolve();
+          return;
+        }
+        img.onload = () => { item.imgElement = img; resolve(); };
+        img.onerror = () => resolve();
+        if (!img.src) img.src = item.url;
+        setTimeout(resolve, 10_000);
+      });
+    }
+    return Promise.resolve();
+  });
+  await Promise.all(promises);
+}
 
-    videoEl.src = url;
+/**
+ * Render a video segment using seeked → play() pattern with requestVideoFrameCallback
+ * or timeupdate for frame-accurate capture.
+ */
+function renderVideoSegment(canvas, ctx, videoEl, videoData, state, exportW, exportH) {
+  return new Promise((resolve) => {
+    // Use preloaded element src if available, else use url directly
+    videoEl.src = videoData.url;
     videoEl.load();
 
     let animId;
-    let started = false;
+    let resolved = false;
+    const safeResolve = () => {
+      if (!resolved) {
+        resolved = true;
+        if (animId) cancelAnimationFrame(animId);
+        resolve();
+      }
+    };
+
+    const useRVFC = typeof videoEl.requestVideoFrameCallback === 'function';
 
     function drawLoop() {
-      const t = videoEl.currentTime;
-      const isEnd = endTime !== null ? t >= endTime : videoEl.ended;
-
-      renderFrame(ctx, canvas.width, canvas.height, videoEl, videoData, state);
-
-      if (isEnd || videoEl.ended || videoEl.paused) {
-        cancelAnimationFrame(animId);
-        resolve();
+      if (videoEl.ended || videoEl.paused) {
+        // Render one last frame then finish
+        renderFrame(ctx, exportW, exportH, videoEl, videoData, state);
+        safeResolve();
         return;
       }
-      animId = requestAnimationFrame(drawLoop);
+      renderFrame(ctx, exportW, exportH, videoEl, videoData, state);
+      if (useRVFC) {
+        videoEl.requestVideoFrameCallback(drawLoop);
+      } else {
+        animId = requestAnimationFrame(drawLoop);
+      }
     }
 
     videoEl.addEventListener(
       'seeked',
       () => {
-        if (!started) {
-          started = true;
-          videoEl.play().catch(() => {});
+        videoEl.play().catch(() => safeResolve());
+        if (useRVFC) {
+          videoEl.requestVideoFrameCallback(drawLoop);
+        } else {
           animId = requestAnimationFrame(drawLoop);
         }
       },
@@ -128,28 +204,58 @@ function renderSegment(canvas, ctx, videoEl, videoData, state) {
     videoEl.addEventListener(
       'loadedmetadata',
       () => {
-        const start = Math.max(0, trim.start || 0);
-        videoEl.currentTime = start;
+        videoEl.currentTime = 0;
       },
       { once: true },
     );
 
     videoEl.addEventListener('ended', () => {
-      cancelAnimationFrame(animId);
-      resolve();
-    });
+      renderFrame(ctx, exportW, exportH, videoEl, videoData, state);
+      safeResolve();
+    }, { once: true });
 
-    videoEl.addEventListener('error', (e) => {
-      cancelAnimationFrame(animId);
-      reject(e);
-    });
+    videoEl.addEventListener('error', () => safeResolve(), { once: true });
 
-    setTimeout(() => {
-      if (!started) {
+    // Fallback timeout: max 5 minutes per segment
+    setTimeout(safeResolve, 300_000);
+  });
+}
+
+/**
+ * Render an image segment: draw the image to canvas for `duration` seconds.
+ */
+function renderImageSegment(canvas, ctx, imageData, state, exportW, exportH) {
+  return new Promise((resolve) => {
+    const { imgElement, duration = 3 } = imageData;
+    const durationMs = duration * 1000;
+    const startTime = performance.now();
+
+    let animId;
+    let resolved = false;
+
+    const safeResolve = () => {
+      if (!resolved) {
+        resolved = true;
         cancelAnimationFrame(animId);
         resolve();
       }
-    }, 30_000);
+    };
+
+    function drawLoop() {
+      const elapsed = performance.now() - startTime;
+      if (elapsed >= durationMs) {
+        renderFrame(ctx, exportW, exportH, imgElement, imageData, state);
+        safeResolve();
+        return;
+      }
+      renderFrame(ctx, exportW, exportH, imgElement, imageData, state);
+      animId = requestAnimationFrame(drawLoop);
+    }
+
+    animId = requestAnimationFrame(drawLoop);
+
+    // Fallback timeout
+    setTimeout(safeResolve, durationMs + 5000);
   });
 }
 

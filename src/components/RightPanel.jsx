@@ -66,7 +66,6 @@ function ToggleRow({ label, checked, onChange }) {
 }
 
 function ColorButton({ color, label, selected, onClick }) {
-  const bg = color === 'black' ? 'bg-black border-gray-600' : color === 'white' ? 'bg-white border-gray-300' : 'bg-transparent border-dashed border-gray-500';
   return (
     <button
       onClick={onClick}
@@ -81,86 +80,38 @@ function ColorButton({ color, label, selected, onClick }) {
   );
 }
 
-// ─── Dual range trim slider ────────────────────────────────────────────────────
-
-function formatTime(sec) {
-  if (!sec || isNaN(sec)) return '0:00';
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function DualRangeSlider({ min, max, start, end, onStartChange, onEndChange }) {
-  const pStart = max > 0 ? ((start - min) / (max - min)) * 100 : 0;
-  const pEnd = max > 0 ? ((end - min) / (max - min)) * 100 : 100;
-
-  return (
-    <div className="dual-range-wrapper mt-2">
-      <div className="range-track-bg" />
-      <div
-        className="range-track-active"
-        style={{ left: `${pStart}%`, width: `${pEnd - pStart}%` }}
-      />
-      <input
-        type="range" min={min} max={max} step={0.1}
-        value={start}
-        onChange={(e) => {
-          const v = Math.min(parseFloat(e.target.value), end - 0.1);
-          onStartChange(v);
-        }}
-      />
-      <input
-        type="range" min={min} max={max} step={0.1}
-        value={end}
-        onChange={(e) => {
-          const v = Math.max(parseFloat(e.target.value), start + 0.1);
-          onEndChange(v);
-        }}
-      />
-    </div>
-  );
-}
-
 // ─── Panel sections ───────────────────────────────────────────────────────────
 
-function AspectRatioSection() {
+const ASPECT_RATIOS = [
+  { label: '9:16', w: 9, h: 16, desc: 'Shorts / Reels / TikTok' },
+  { label: '16:9', w: 16, h: 9, desc: '유튜브' },
+  { label: '1:1',  w: 1,  h: 1,  desc: '인스타그램' },
+];
+
+function AspectRatioSection({ aspectRatio, updateAspectRatio }) {
   return (
     <Section title="비율 설정" defaultOpen>
-      <div className="flex items-center justify-between bg-[#1e1e2c] rounded-lg px-3 py-2.5">
-        <span className="text-xs text-gray-400">현재 비율</span>
-        <span className="text-xs font-bold text-blue-400">9:16  Shorts / Reels / TikTok</span>
+      <div className="flex flex-col gap-2">
+        {ASPECT_RATIOS.map((ar) => {
+          const isSelected = aspectRatio.label === ar.label;
+          return (
+            <button
+              key={ar.label}
+              onClick={() => updateAspectRatio({ label: ar.label, w: ar.w, h: ar.h })}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all text-left
+                ${isSelected
+                  ? 'bg-blue-900/40 border-blue-500 text-white'
+                  : 'bg-[#1e1e2c] border-[#2a2a38] text-gray-400 hover:border-[#3a3a52]'
+                }`}
+            >
+              <span className={`text-xs font-bold ${isSelected ? 'text-blue-300' : 'text-gray-300'}`}>
+                {ar.label}
+              </span>
+              <span className="text-xs text-gray-500">{ar.desc}</span>
+            </button>
+          );
+        })}
       </div>
-    </Section>
-  );
-}
-
-function TrimSection({ video, updateTrim }) {
-  if (!video) {
-    return (
-      <Section title="영상 자르기">
-        <p className="text-xs text-gray-600">영상을 선택하세요</p>
-      </Section>
-    );
-  }
-
-  const { trim, duration } = video;
-  const dur = duration || 0;
-
-  return (
-    <Section title="영상 자르기" defaultOpen>
-      <div className="text-xs text-gray-500 flex justify-between">
-        <span>시작: <strong className="text-gray-300">{formatTime(trim.start)}</strong></span>
-        <span>종료: <strong className="text-gray-300">{formatTime(trim.end || dur)}</strong></span>
-        <span>길이: <strong className="text-blue-400">{formatTime((trim.end || dur) - trim.start)}</strong></span>
-      </div>
-      <DualRangeSlider
-        min={0}
-        max={dur}
-        start={trim.start}
-        end={trim.end || dur}
-        onStartChange={(v) => updateTrim(video.id, { start: v })}
-        onEndChange={(v) => updateTrim(video.id, { end: v })}
-      />
     </Section>
   );
 }
@@ -174,7 +125,7 @@ function VideoSizeSection({ vs, updateVideoSettings }) {
 
   return (
     <Section title="영상 크기/위치 (전체 적용)" defaultOpen>
-      <p className="text-[11px] text-gray-600">모든 영상에 동일하게 적용됩니다</p>
+      <p className="text-[11px] text-gray-600">모든 미디어에 동일하게 적용됩니다</p>
 
       <FieldRow label="맞춤 모드">
         <div className="flex gap-1.5">
@@ -438,8 +389,10 @@ function ExportButton() {
   const [status, setStatus] = useState(null);
   const [progress, setProgress] = useState(null);
 
+  const mediaItems = state.mediaItems || [];
+
   const handleExport = async () => {
-    if (!state.videos.length) return;
+    if (!mediaItems.length) return;
     setStatus('processing');
     setProgress(null);
     try {
@@ -457,7 +410,7 @@ function ExportButton() {
     }
   };
 
-  const disabled = !state.videos.length || status === 'processing';
+  const disabled = !mediaItems.length || status === 'processing';
 
   return (
     <div className="pt-3">
@@ -478,7 +431,7 @@ function ExportButton() {
           ? '✓ 다운로드 완료!'
           : status === 'error'
           ? '오류 발생 — 다시 시도'
-          : `전체 영상 연결 다운로드 (${state.videos.length}개)`}
+          : `전체 미디어 연결 다운로드 (${mediaItems.length}개)`}
       </button>
       {status === 'processing' && (
         <p className="text-xs text-gray-600 text-center mt-1">
@@ -494,9 +447,8 @@ function ExportButton() {
 export default function RightPanel() {
   const {
     state,
-    selectedVideo,
+    updateAspectRatio,
     updateVideoSettings,
-    updateTrim,
     updateTitle,
     updateImageOverlay,
     updateUsername,
@@ -505,8 +457,7 @@ export default function RightPanel() {
 
   return (
     <aside className="flex flex-col gap-2.5 pb-2">
-      <AspectRatioSection />
-      <TrimSection video={selectedVideo} updateTrim={updateTrim} />
+      <AspectRatioSection aspectRatio={state.aspectRatio} updateAspectRatio={updateAspectRatio} />
       <VideoSizeSection vs={state.videoSettings} updateVideoSettings={updateVideoSettings} />
       <TitleTextSection titleText={state.titleText} updateTitle={updateTitle} />
       <ImageOverlaySection imageOverlay={state.imageOverlay} updateImageOverlay={updateImageOverlay} />
