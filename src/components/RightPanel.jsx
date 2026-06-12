@@ -165,17 +165,7 @@ function TrimSection({ video, updateTrim }) {
   );
 }
 
-function VideoSizeSection({ video, updateVideoSettings }) {
-  if (!video) {
-    return (
-      <Section title="영상 크기/위치">
-        <p className="text-xs text-gray-600">영상을 선택하세요</p>
-      </Section>
-    );
-  }
-
-  const { videoSettings: vs } = video;
-
+function VideoSizeSection({ vs, updateVideoSettings }) {
   const fitOptions = [
     { value: 'fit', label: '화면에 맞춤' },
     { value: 'fill', label: '화면 채우기' },
@@ -183,14 +173,15 @@ function VideoSizeSection({ video, updateVideoSettings }) {
   ];
 
   return (
-    <Section title="영상 크기/위치" defaultOpen>
-      {/* Fit mode */}
+    <Section title="영상 크기/위치 (전체 적용)" defaultOpen>
+      <p className="text-[11px] text-gray-600">모든 영상에 동일하게 적용됩니다</p>
+
       <FieldRow label="맞춤 모드">
         <div className="flex gap-1.5">
           {fitOptions.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => updateVideoSettings(video.id, { fit: opt.value })}
+              onClick={() => updateVideoSettings({ fit: opt.value })}
               className={`flex-1 text-xs py-1.5 rounded-lg border transition-colors
                 ${vs.fit === opt.value
                   ? 'bg-blue-600 border-blue-600 text-white'
@@ -203,28 +194,26 @@ function VideoSizeSection({ video, updateVideoSettings }) {
         </div>
       </FieldRow>
 
-      {/* Scale — works for all fit modes */}
       <SliderField
         label="영상 크기 (줌)"
         value={vs.scale}
         min={10} max={300} step={1}
-        onChange={(v) => updateVideoSettings(video.id, { scale: v })}
+        onChange={(v) => updateVideoSettings({ scale: v })}
         displayValue={`${vs.scale}%`}
       />
 
-      {/* X/Y position */}
       <SliderField
         label="X 위치"
         value={vs.x}
         min={-500} max={500} step={1}
-        onChange={(v) => updateVideoSettings(video.id, { x: v })}
+        onChange={(v) => updateVideoSettings({ x: v })}
         displayValue={`${vs.x}px`}
       />
       <SliderField
         label="Y 위치"
         value={vs.y}
         min={-800} max={800} step={1}
-        onChange={(v) => updateVideoSettings(video.id, { y: v })}
+        onChange={(v) => updateVideoSettings({ y: v })}
         displayValue={`${vs.y}px`}
       />
     </Section>
@@ -518,7 +507,7 @@ export default function RightPanel() {
     <aside className="flex flex-col gap-2.5 pb-2">
       <AspectRatioSection />
       <TrimSection video={selectedVideo} updateTrim={updateTrim} />
-      <VideoSizeSection video={selectedVideo} updateVideoSettings={updateVideoSettings} />
+      <VideoSizeSection vs={state.videoSettings} updateVideoSettings={updateVideoSettings} />
       <TitleTextSection titleText={state.titleText} updateTitle={updateTitle} />
       <ImageOverlaySection imageOverlay={state.imageOverlay} updateImageOverlay={updateImageOverlay} />
       <UsernameSection username={state.username} updateUsername={updateUsername} />

@@ -4,6 +4,7 @@ import { defaultFontId } from '../config/fontConfig.js';
 const initialState = {
   videos: [],
   selectedVideoId: null,
+  videoSettings: { x: 0, y: 0, fit: 'fill', scale: 100 },
   titleText: {
     enabled: false,
     text: '제목을 입력하세요',
@@ -56,9 +57,7 @@ function makeVideo(file) {
     name: file.name,
     duration: 0,
     thumbnail: null,
-    displayScale: 100,
     trim: { start: 0, end: 0 },
-    videoSettings: { x: 0, y: 0, fit: 'fill', scale: 100 },
   };
 }
 
@@ -95,14 +94,7 @@ function reducer(state, action) {
       };
 
     case 'UPDATE_VIDEO_SETTINGS':
-      return {
-        ...state,
-        videos: state.videos.map((v) =>
-          v.id === action.id
-            ? { ...v, videoSettings: { ...v.videoSettings, ...action.patch } }
-            : v,
-        ),
-      };
+      return { ...state, videoSettings: { ...state.videoSettings, ...action.patch } };
 
     case 'SET_THUMBNAIL':
       return {
@@ -151,7 +143,7 @@ export function EditorProvider({ children }) {
   const selectVideo = useCallback((id) => dispatch({ type: 'SELECT_VIDEO', id }), []);
   const updateVideo = useCallback((id, patch) => dispatch({ type: 'UPDATE_VIDEO', id, patch }), []);
   const updateVideoSettings = useCallback(
-    (id, patch) => dispatch({ type: 'UPDATE_VIDEO_SETTINGS', id, patch }),
+    (patch) => dispatch({ type: 'UPDATE_VIDEO_SETTINGS', patch }),
     [],
   );
   const updateTrim = useCallback((id, patch) => dispatch({ type: 'UPDATE_TRIM', id, patch }), []);

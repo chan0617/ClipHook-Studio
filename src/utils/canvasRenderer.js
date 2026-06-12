@@ -10,7 +10,7 @@ export function renderFrame(ctx, canvasW, canvasH, videoEl, videoData, globalSta
 
   // Video frame
   if (videoEl && videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
-    drawVideo(ctx, canvasW, canvasH, videoEl, videoData);
+    drawVideo(ctx, canvasW, canvasH, videoEl, videoData, globalState);
   }
 
   // Image overlay
@@ -38,10 +38,10 @@ export function renderFrame(ctx, canvasW, canvasH, videoEl, videoData, globalSta
   }
 }
 
-function drawVideo(ctx, cw, ch, videoEl, videoData) {
+function drawVideo(ctx, cw, ch, videoEl, videoData, globalState) {
   const vw = videoEl.videoWidth;
   const vh = videoEl.videoHeight;
-  const { x = 0, y = 0, fit = 'fill', scale: vidScale = 100 } = videoData?.videoSettings || {};
+  const { x = 0, y = 0, fit = 'fill', scale: vidScale = 100 } = globalState?.videoSettings || {};
 
   const canvasAR = cw / ch;
   const videoAR = vw / vh;
