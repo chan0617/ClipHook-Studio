@@ -123,7 +123,7 @@ export default function CenterPanel() {
     }
   }
 
-  // Load item when previewIndex changes
+  // Load item when previewIndex changes OR when the item at that index is replaced
   useEffect(() => {
     const item = mediaItems[previewIndex];
     if (!item) return;
@@ -134,10 +134,6 @@ export default function CenterPanel() {
     clearImageTimer();
 
     if (item.type === 'video') {
-      video.pause();
-      video.src = item.url;
-      video.load();
-
       const onMeta = () => {
         const dur = isFinite(video.duration) ? video.duration : 0;
         if (!item.duration || Math.abs(item.duration - dur) > 0.5) {
@@ -146,14 +142,28 @@ export default function CenterPanel() {
             trim: { start: item.trim?.start || 0, end: item.trim?.end || dur },
           });
         }
-        video.currentTime = item.trim?.start || 0;
+        if (!seqRef.current.isPlaying) {
+          video.currentTime = item.trim?.start || 0;
+        }
       };
-      video.addEventListener('loadedmetadata', onMeta, { once: true });
+
+      // During auto-advance (isPlaying=true), loadAndPlay already set up the element.
+      // Re-pausing/reloading here would break the play() chain.
+      if (seqRef.current.isPlaying && video.src === item.url) {
+        if (video.readyState >= 1) onMeta();
+        else video.addEventListener('loadedmetadata', onMeta, { once: true });
+      } else {
+        video.pause();
+        video.src = item.url;
+        video.load();
+        video.addEventListener('loadedmetadata', onMeta, { once: true });
+      }
     } else {
       video.pause();
       video.src = '';
     }
-  }, [previewIndex]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewIndex, mediaItems[previewIndex]?.id]);
 
   // Enforce trim
   useEffect(() => {
@@ -180,11 +190,15 @@ export default function CenterPanel() {
     const ctx = canvas.getContext('2d');
 
     function loop() {
-      const items    = stateRef.current.mediaItems;
-      const idx      = seqRef.current.index;
-      const curItem  = items[idx] || null;
-      const mediaEl  = (curItem?.type === 'video') ? videoRef.current : null;
-      renderFrame(ctx, canvas.width, canvas.height, mediaEl, curItem, stateRef.current);
+      try {
+        const items   = stateRef.current.mediaItems;
+        const idx     = seqRef.current.index;
+        const curItem = items[idx] || null;
+        const mediaEl = (curItem?.type === 'video') ? videoRef.current : null;
+        renderFrame(ctx, canvas.width, canvas.height, mediaEl, curItem, stateRef.current);
+      } catch (e) {
+        console.error('[canvas] renderFrame error:', e);
+      }
       animRef.current = requestAnimationFrame(loop);
     }
 
@@ -390,7 +404,7 @@ export default function CenterPanel() {
             </div>
           )}
 
-          <div className="absolute bottom-2 right-2 bg-black/50 text-white/60 text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none">
+          <div className="absolute top-2 right-2 bg-black/50 text-white/60 text-[10px] font-bold px-2 py-0.5 rounded-full pointer-events-none">
             {ASPECT_RATIOS[aspectRatio]?.w}×{ASPECT_RATIOS[aspectRatio]?.h}
           </div>
         </div>

@@ -699,24 +699,27 @@ function ExportButton() {
 
     const token = createCancelToken();
     cancelRef.current = token;
+    let hadError = false;
 
     try {
       await exportMedia(
         state,
         (p) => setProgress(p),
         (err) => {
+          hadError = true;
           setStatus('error');
           setErrorInfo(err);
         },
         token,
       );
 
-      if (!token.cancelled) {
+      if (token.cancelled) {
+        setStatus(null);
+      } else if (!hadError) {
         setStatus('done');
         setTimeout(() => setStatus(null), 4000);
-      } else {
-        setStatus(null);
       }
+      // if hadError: status is already 'error', don't overwrite
     } catch (e) {
       setStatus('error');
       setErrorInfo({ code: 'UNKNOWN', message: e.message || String(e) });

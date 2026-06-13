@@ -109,19 +109,21 @@ async function exportWithMediaRecorder(state, sequence, dims, fps, exportSetting
   const mimeType = getSupportedMimeType(exportSettings.format);
   const stream   = canvas.captureStream(fps);
 
-  let audioCtx, audioSource, audioDest, videoEl;
+  const videoEl = document.createElement('video');
+  videoEl.crossOrigin = 'anonymous';
+  videoEl.playsInline = true;
 
+  // Capture audio via Web Audio API — do NOT connect to audioCtx.destination
+  // (prevents speaker output during export while still recording audio)
+  let audioCtx, audioDest, resumeFn;
   try {
-    audioCtx    = new AudioContext();
-    audioDest   = audioCtx.createMediaStreamDestination();
-    videoEl     = document.createElement('video');
-    videoEl.crossOrigin = 'anonymous';
-    videoEl.playsInline = true;
-    audioSource = audioCtx.createMediaElementSource(videoEl);
-    audioSource.connect(audioDest);
-    audioSource.connect(audioCtx.destination);
+    audioCtx  = new AudioContext();
+    audioDest = audioCtx.createMediaStreamDestination();
+    const src = audioCtx.createMediaElementSource(videoEl);
+    src.connect(audioDest);
+    resumeFn  = () => audioCtx.state === 'suspended' ? audioCtx.resume() : Promise.resolve();
   } catch {
-    // Audio capture unavailable — continue without
+    resumeFn = () => Promise.resolve();
   }
 
   const finalStream = audioDest
@@ -163,15 +165,15 @@ async function exportWithMediaRecorder(state, sequence, dims, fps, exportSetting
     });
 
     try {
-      if (seg.item.type === 'video' && videoEl) {
-        await renderVideoSegment(canvas, ctx, videoEl, seg, state, cancelToken);
+      if (seg.item.type === 'video') {
+        await renderVideoSegment(canvas, ctx, videoEl, seg, state, cancelToken, resumeFn);
       } else if (seg.item.type === 'image') {
         await renderImageSegment(canvas, ctx, seg, state, fps, cancelToken);
       }
     } catch (err) {
       recorder.stop();
-      if (videoEl) videoEl.src = '';
-      if (audioCtx) audioCtx.close();
+      videoEl.src = '';
+      audioCtx?.close();
       onError({
         code:    'SEGMENT_FAILED',
         message: `미디어 처리 실패: ${seg.item.name} — ${err.message}`,
@@ -182,8 +184,8 @@ async function exportWithMediaRecorder(state, sequence, dims, fps, exportSetting
   }
 
   recorder.stop();
-  if (videoEl) videoEl.src = '';
-  if (audioCtx) audioCtx.close();
+  videoEl.src = '';
+  audioCtx?.close();
 
   if (cancelToken.cancelled) return;
 
@@ -195,20 +197,22 @@ async function exportWithMediaRecorder(state, sequence, dims, fps, exportSetting
 
 // ─── Render one video segment (critical fix) ──────────────────────────────────
 
-function renderVideoSegment(canvas, ctx, videoEl, seg, state, cancelToken) {
+function renderVideoSegment(canvas, ctx, videoEl, seg, state, cancelToken, resumeFn = () => Promise.resolve()) {
   return new Promise((resolve, reject) => {
     const { item, startTime, duration } = seg;
-    const endTime = startTime + duration;
+    let endTime = startTime + duration; // may be 0 if metadata not yet loaded
 
-    let animId       = null;
-    let renderActive = false;
-    let errorFired   = false;
+    let animId        = null;
+    let renderActive  = false;
+    let errorFired    = false;
+    let cleanupCalled = false; // guard: prevents stale rVFC callbacks from calling pause() after resolve
 
     function cleanup(err) {
-      renderActive = false;
+      if (cleanupCalled) return;
+      cleanupCalled = true;
+      renderActive  = false;
       if (animId) { cancelAnimationFrame(animId); animId = null; }
 
-      // Remove all listeners to avoid double-fire
       videoEl.removeEventListener('playing', onPlaying);
       videoEl.removeEventListener('ended',   onEnded);
       videoEl.removeEventListener('error',   onError);
@@ -273,12 +277,18 @@ function renderVideoSegment(canvas, ctx, videoEl, seg, state, cancelToken) {
     videoEl.addEventListener('playing', () => clearTimeout(watchdog), { once: true });
 
     function onSeeked() {
-      videoEl.play().catch(err => {
-        cleanup(new Error(`재생 시작 실패: ${item.name} — ${err.message}`));
+      resumeFn().then(() => {
+        videoEl.play().catch(err => {
+          cleanup(new Error(`재생 시작 실패: ${item.name} — ${err.message}`));
+        });
       });
     }
 
     function onMeta() {
+      // If duration was unknown (0) at export time, use actual video duration
+      if (endTime <= startTime && isFinite(videoEl.duration) && videoEl.duration > 0) {
+        endTime = startTime + videoEl.duration;
+      }
       const start = Math.max(0, startTime);
       if (Math.abs(videoEl.currentTime - start) > 0.15) {
         videoEl.addEventListener('seeked', onSeeked, { once: true });
